@@ -1,0 +1,84 @@
+awesome—here’s the “kid-friendly” version first, and then the “pro terms” for the exact same things.
+
+# What we built (simple)
+
+* A small app that looks at your text messages, guesses which ones are scams, and shows the risk and reasons. You can change how strict it is, see only risky ones, and download the flagged list.
+
+# How it works — simple → pro terms
+
+* **We used examples to learn what “spam” looks like.**
+  **Pro:** Supervised learning on the UCI SMS Spam Collection dataset (labeled ham/spam examples).
+
+* **We turned words into numbers so a computer can work with them.**
+  **Pro:** Text vectorization with TF-IDF (unigrams + bigrams, English stopwords, `max_df=0.95`).
+
+* **We trained a yes/no “spam” predictor that also gives a confidence score.**
+  **Pro:** Logistic Regression classifier with `class_weight='balanced'`, `solver='liblinear'`, outputting `P(spam)`.
+
+* **We saved the trained brain to a file so the app can reuse it.**
+  **Pro:** Persist model with `joblib` to `data/processed/sms_model.joblib`.
+
+* **We set a slider to choose how cautious to be.**
+  **Pro:** Decision threshold on `P(spam)` (e.g., 0.60) to trade precision vs recall.
+
+* **We checked how good it is with simple scores.**
+  **Pro:** Evaluation via Accuracy, F1, and ROC-AUC (on a train/test split).
+
+* **We show a quick “why” by listing suspicious words.**
+  **Pro:** Lightweight keyword explanation (heuristic); could be upgraded to coefficient-based or SHAP explanations.
+
+* **We fixed weird symbols like `Â£` showing up.**
+  **Pro:** Encoding normalization: read raw bytes with UTF-8/CP1252/Latin-1 fallbacks; cleaned mojibake and wrote CSV as UTF-8.
+
+* **We built a simple website to upload messages and see results.**
+  **Pro:** Streamlit UI with file uploader, filtering (spam-only), sorting (probability desc), and styling (highlight rows with `spam_prob ≥ 0.90`).
+
+* **We organized the project so training code, model code, data, and the app are cleanly separated.**
+  **Pro:**
+
+  ```
+  data/raw, data/processed            # inputs & saved artifacts
+  src/guardia/models/sms.py           # TF-IDF + LogisticRegression pipeline
+  scripts/train_sms_baseline.py       # training & metrics
+  scripts/rebuild_sms_csv.py          # encoding/CSV rebuild utility
+  streamlit_app.py                    # UI (tabs, upload, inference)
+  ```
+
+# Why these choices — simple → pro
+
+* **Fast, easy, and works well on short texts.**
+  **Pro:** TF-IDF + Logistic Regression is a strong, interpretable baseline for short-form NLP like SMS/phishing.
+
+* **You can explain it.**
+  **Pro:** Linear model with feature weights is interpretable; easy to surface top contributing n-grams.
+
+* **Runs on a normal laptop.**
+  **Pro:** Sparse features + linear solver are lightweight and don’t require GPUs.
+
+# What each main file does — simple → pro
+
+* **`rebuild_sms_csv.py`: make a clean message file.**
+  **Pro:** Re-decode raw TSV, fix mojibake, write `label,text` CSV (UTF-8).
+* **`train_sms_baseline.py`: teach the model and save it.**
+  **Pro:** Load CSV, train TF-IDF→LogReg pipeline, print metrics, save with joblib.
+* **`sms.py`: recipe for how to turn text into numbers and classify.**
+  **Pro:** Scikit-learn `Pipeline([TfidfVectorizer, LogisticRegression])`.
+* **`streamlit_app.py`: the control panel.**
+  **Pro:** Inference UI: upload → vectorize → `predict_proba` → threshold → display.
+
+# Key ideas to remember (simple → pro)
+
+* **More strict slider → fewer false alarms but you might miss some spam.**
+  **Pro:** Higher threshold ↑ precision, ↓ recall; lower threshold does the opposite.
+* **Accuracy can lie when the classes are uneven; F1 helps balance.**
+  **Pro:** Use F1 for imbalanced datasets; ROC-AUC for threshold-independent separability.
+* **Garbage in, garbage out: fix text encoding first.**
+  **Pro:** Normalize input encodings to UTF-8; handle CP1252/Latin-1 fallbacks.
+
+# If you want to level up next
+
+* **Better “why”** (simple) → **Coefficient-based explanations** (pro): show top positive TF-IDF features per message from the logistic regression weights.
+* **Web protection** (simple) → **Chrome extension with heuristics** (pro): HTTPS check, domain age (WHOIS), suspicious tokens, content scan.
+* **Bigger model** (simple) → **Transformer** (pro): swap classifier for DistilBERT fine-tune to improve recall on tricky phish.
+
+If you want, say “explanations next” or “Chrome extension next” and I’ll walk you through it step by step again.
